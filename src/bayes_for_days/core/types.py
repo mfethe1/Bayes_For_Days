@@ -190,3 +190,98 @@ MetadataDict = Dict[str, Any]
 # Function type aliases
 ObjectiveFunction = Callable[[ParameterDict], ObjectiveDict]
 ConstraintFunction = Callable[[ParameterDict], ConstraintDict]
+
+
+class DataQualityMetrics(BaseModel):
+    """Metrics for data quality assessment."""
+    completeness: float = Field(..., description="Fraction of non-missing values")
+    consistency: float = Field(..., description="Consistency score")
+    validity: float = Field(..., description="Validity score based on constraints")
+    accuracy: Optional[float] = Field(default=None, description="Accuracy score if ground truth available")
+    timeliness: Optional[float] = Field(default=None, description="Timeliness score")
+    anomaly_score: float = Field(default=0.0, description="Anomaly detection score")
+    drift_score: float = Field(default=0.0, description="Data drift score")
+
+    def overall_quality(self) -> float:
+        """Compute overall quality score."""
+        scores = [self.completeness, self.consistency, self.validity]
+        if self.accuracy is not None:
+            scores.append(self.accuracy)
+        if self.timeliness is not None:
+            scores.append(self.timeliness)
+
+        # Penalize for anomalies and drift
+        base_score = np.mean(scores)
+        penalty = (self.anomaly_score + self.drift_score) / 2
+        return max(0.0, base_score - penalty)
+
+
+class ImputationStrategy(str, Enum):
+    """Available imputation strategies."""
+    MEAN = "mean"
+    MEDIAN = "median"
+    MODE = "mode"
+    FORWARD_FILL = "forward_fill"
+    BACKWARD_FILL = "backward_fill"
+    LINEAR_INTERPOLATION = "linear_interpolation"
+    MICE = "mice"  # Multiple Imputation by Chained Equations
+    KNN = "knn"
+    GP_IMPUTATION = "gp_imputation"  # Gaussian Process based
+    DOMAIN_AWARE = "domain_aware"  # Domain-specific imputation
+
+
+class DataDomain(str, Enum):
+    """Experimental data domains."""
+    CHEMICAL = "chemical"
+    MATERIALS = "materials"
+    BIOLOGICAL = "biological"
+    PHYSICAL = "physical"
+    GENERIC = "generic"
+
+
+class DataVersionInfo(BaseModel):
+    """Information about data version."""
+    version_id: str = Field(..., description="Unique version identifier")
+    parent_version: Optional[str] = Field(default=None, description="Parent version ID")
+    timestamp: datetime = Field(default_factory=datetime.now, description="Version timestamp")
+    author: str = Field(..., description="Version author")
+    message: str = Field(..., description="Version commit message")
+    changes_summary: Dict[str, Any] = Field(default_factory=dict, description="Summary of changes")
+    data_hash: str = Field(..., description="Hash of the data content")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
+
+
+class CampaignVersionInfo(BaseModel):
+    """Version information for optimization campaigns."""
+    campaign_id: str = Field(..., description="Campaign identifier")
+    version: str = Field(..., description="Campaign version")
+    pareto_front_hash: str = Field(..., description="Hash of current Pareto front")
+    parameter_space_hash: str = Field(..., description="Hash of parameter space definition")
+    acquisition_history: List[str] = Field(default_factory=list, description="Acquisition function decisions")
+    exploration_metrics: Dict[str, float] = Field(default_factory=dict, description="Exploration metrics")
+    convergence_state: Dict[str, Any] = Field(default_factory=dict, description="Convergence information")
+
+
+class DataStreamConfig(BaseModel):
+    """Configuration for real-time data streams."""
+    stream_id: str = Field(..., description="Stream identifier")
+    source_type: str = Field(..., description="Data source type (LIMS, ELN, instrument)")
+    connection_params: Dict[str, Any] = Field(..., description="Connection parameters")
+    quality_thresholds: DataQualityMetrics = Field(..., description="Quality thresholds")
+    monitoring_interval: int = Field(default=60, description="Monitoring interval in seconds")
+    buffer_size: int = Field(default=1000, description="Stream buffer size")
+    enable_anomaly_detection: bool = Field(default=True, description="Enable anomaly detection")
+    enable_drift_detection: bool = Field(default=True, description="Enable drift detection")
+
+
+class ProcessingPipeline(BaseModel):
+    """Configuration for data processing pipeline."""
+    pipeline_id: str = Field(..., description="Pipeline identifier")
+    domain: DataDomain = Field(..., description="Data domain")
+    preprocessing_steps: List[str] = Field(..., description="Preprocessing step names")
+    imputation_strategy: ImputationStrategy = Field(default=ImputationStrategy.MICE, description="Imputation strategy")
+    normalization_method: str = Field(default="standard", description="Normalization method")
+    feature_engineering: bool = Field(default=True, description="Enable feature engineering")
+    constraint_checking: bool = Field(default=True, description="Enable constraint checking")
+    quality_monitoring: bool = Field(default=True, description="Enable quality monitoring")
+    custom_processors: List[str] = Field(default_factory=list, description="Custom processor names")
