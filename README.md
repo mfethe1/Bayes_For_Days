@@ -1,8 +1,41 @@
 # Bayes For Days
 
-**Comprehensive Bayesian Experimental Design Optimization Platform**
+A comprehensive Bayesian experimental design platform for multi-objective optimization with cutting-edge methodologies and seamless integration capabilities.
 
-A sophisticated platform for multi-objective Bayesian optimization with adaptive learning capabilities, designed for experimental design and optimization scenarios.
+## 🚀 Features
+
+### Multi-Objective Optimization
+- **NSGA-II Algorithm**: State-of-the-art multi-objective genetic algorithm
+- **Pareto Front Management**: Efficient tracking and analysis of non-dominated solutions
+- **Expected Pareto Improvement (EPI)**: Advanced acquisition function for multi-objective Bayesian optimization
+- **q-Noisy Expected Hypervolume Improvement (qNEHVI)**: Batch optimization with noise handling
+- **Constraint Handling**: Multiple constraint handling methods including feasibility rules and penalty methods
+
+### Gaussian Process Surrogate Models
+- **Stochastic Variational Gaussian Processes (SVGP)**: Scalable GP implementation
+- **Multiple Kernel Support**: Matérn, RBF, and custom kernels
+- **Automatic Relevance Determination (ARD)**: Automatic feature selection
+- **Multi-Output GPs**: Handle multiple objectives simultaneously
+- **Ensemble Models**: Combine multiple surrogate models for robust predictions
+
+### Experimental Design Strategies
+- **D-Optimal Design**: Maximize information for parameter estimation
+- **Latin Hypercube Sampling (LHS)**: Space-filling designs with optimization
+- **Factorial Designs**: Full and fractional factorial designs
+- **Response Surface Methodology (RSM)**: Central composite and Box-Behnken designs
+- **Bayesian Adaptive Experimental Design (BAED)**: Information-theoretic experiment selection
+
+### Laboratory Integration
+- **Concentration/Value Setting System**: Practical laboratory parameter management
+- **Stock Solution Constraints**: Real-world reagent availability and dilution calculations
+- **Cost-Aware Design**: Optimize experiments considering reagent costs and instrument time
+- **Multi-Stage Workflows**: Sequential experimental campaigns with adaptive stopping
+
+### Advanced Optimization
+- **Hybrid Strategies**: Combine Bayesian optimization with genetic algorithms and local search
+- **Ensemble Learning**: Multiple model combination with dynamic weighting
+- **Acquisition Function Portfolio**: Expected Improvement, Upper Confidence Bound, and more
+- **Batch Optimization**: Parallel experiment selection and execution
 
 ## 🚀 Features
 

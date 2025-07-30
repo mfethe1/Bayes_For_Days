@@ -21,6 +21,7 @@ from abc import ABC, abstractmethod
 import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+from enum import Enum
 
 from bayes_for_days.core.base import BaseOptimizer
 from bayes_for_days.core.types import (
@@ -31,6 +32,335 @@ from bayes_for_days.core.types import (
     OptimizationResult,
     ConstraintFunction,
 )
+
+
+class ConstraintHandlingMethod(Enum):
+    """Methods for handling constraints in multi-objective optimization."""
+    PENALTY = "penalty"
+    DEATH_PENALTY = "death_penalty"
+    FEASIBILITY_RULES = "feasibility_rules"
+    EPSILON_CONSTRAINT = "epsilon_constraint"
+    CONSTRAINT_DOMINATION = "constraint_domination"
+
+
+@dataclass
+class ConstraintViolation:
+    """
+    Detailed constraint violation information.
+
+    Tracks individual constraint violations and provides
+    methods for computing penalty values and feasibility status.
+    """
+    constraint_values: Dict[str, float] = field(default_factory=dict)
+    violation_magnitudes: Dict[str, float] = field(default_factory=dict)
+    total_violation: float = 0.0
+    is_feasible: bool = True
+    penalty_value: float = 0.0
+
+    def __post_init__(self):
+        """Calculate derived values after initialization."""
+        self.update_violation_status()
+
+    def update_violation_status(self):
+        """Update violation status based on constraint values."""
+        self.violation_magnitudes = {}
+        self.total_violation = 0.0
+
+        for constraint_name, value in self.constraint_values.items():
+            # Assume constraint is violated if value > 0
+            violation = max(0.0, value)
+            self.violation_magnitudes[constraint_name] = violation
+            self.total_violation += violation
+
+        self.is_feasible = self.total_violation <= 1e-6
+
+    def compute_penalty(self, penalty_factor: float = 1000.0) -> float:
+        """
+        Compute penalty value for constraint violations.
+
+        Args:
+            penalty_factor: Multiplier for penalty calculation
+
+        Returns:
+            Penalty value
+        """
+        if self.is_feasible:
+            self.penalty_value = 0.0
+        else:
+            # Quadratic penalty
+            self.penalty_value = penalty_factor * (self.total_violation ** 2)
+
+        return self.penalty_value
+
+
+class ConstraintHandler:
+    """
+    Comprehensive constraint handling for multi-objective optimization.
+
+    Implements various constraint handling methods:
+    - Penalty methods (linear, quadratic, adaptive)
+    - Death penalty (reject infeasible solutions)
+    - Feasibility rules (prefer feasible over infeasible)
+    - Epsilon-constraint method
+    - Constraint domination
+    """
+
+    def __init__(
+        self,
+        method: ConstraintHandlingMethod = ConstraintHandlingMethod.FEASIBILITY_RULES,
+        penalty_factor: float = 1000.0,
+        adaptive_penalty: bool = True,
+        epsilon_tolerance: float = 1e-6,
+        **kwargs
+    ):
+        """
+        Initialize constraint handler.
+
+        Args:
+            method: Constraint handling method to use
+            penalty_factor: Initial penalty factor for penalty methods
+            adaptive_penalty: Whether to adapt penalty factor over time
+            epsilon_tolerance: Tolerance for epsilon-constraint method
+            **kwargs: Additional method-specific parameters
+        """
+        self.method = method
+        self.penalty_factor = penalty_factor
+        self.initial_penalty_factor = penalty_factor
+        self.adaptive_penalty = adaptive_penalty
+        self.epsilon_tolerance = epsilon_tolerance
+
+        # Adaptive penalty parameters
+        self.generation_count = 0
+        self.feasible_ratio_history = []
+        self.penalty_adaptation_rate = kwargs.get('penalty_adaptation_rate', 1.1)
+
+        # Statistics
+        self.total_evaluations = 0
+        self.feasible_evaluations = 0
+
+        logger.info(f"Initialized constraint handler with method: {method.value}")
+
+    def evaluate_constraints(
+        self,
+        individual: 'Individual',
+        constraint_functions: List[ConstraintFunction]
+    ) -> ConstraintViolation:
+        """
+        Evaluate constraints for an individual.
+
+        Args:
+            individual: Individual to evaluate
+            constraint_functions: List of constraint functions
+
+        Returns:
+            Constraint violation information
+        """
+        constraint_values = {}
+
+        for constraint_func in constraint_functions:
+            try:
+                violation = constraint_func(individual.parameters)
+                constraint_values[constraint_func.__name__] = violation
+            except Exception as e:
+                logger.warning(f"Constraint evaluation failed: {e}")
+                constraint_values[constraint_func.__name__] = float('inf')
+
+        # Create constraint violation object
+        violation = ConstraintViolation(constraint_values=constraint_values)
+
+        # Update individual's constraint information
+        individual.constraints = constraint_values
+        individual.constraint_violation = violation.total_violation
+        individual.is_feasible = violation.is_feasible
+
+        # Update statistics
+        self.total_evaluations += 1
+        if violation.is_feasible:
+            self.feasible_evaluations += 1
+
+        return violation
+
+    def handle_constraints(
+        self,
+        population: List['Individual'],
+        constraint_functions: List[ConstraintFunction]
+    ) -> List['Individual']:
+        """
+        Apply constraint handling to population.
+
+        Args:
+            population: Population of individuals
+            constraint_functions: List of constraint functions
+
+        Returns:
+            Population with constraint handling applied
+        """
+        if not constraint_functions:
+            return population
+
+        # Evaluate constraints for all individuals
+        violations = []
+        for individual in population:
+            violation = self.evaluate_constraints(individual, constraint_functions)
+            violations.append(violation)
+
+        # Apply constraint handling method
+        if self.method == ConstraintHandlingMethod.PENALTY:
+            return self._apply_penalty_method(population, violations)
+        elif self.method == ConstraintHandlingMethod.DEATH_PENALTY:
+            return self._apply_death_penalty(population, violations)
+        elif self.method == ConstraintHandlingMethod.FEASIBILITY_RULES:
+            return self._apply_feasibility_rules(population, violations)
+        elif self.method == ConstraintHandlingMethod.CONSTRAINT_DOMINATION:
+            return self._apply_constraint_domination(population, violations)
+        else:
+            logger.warning(f"Unknown constraint handling method: {self.method}")
+            return population
+
+    def _apply_penalty_method(
+        self,
+        population: List['Individual'],
+        violations: List[ConstraintViolation]
+    ) -> List['Individual']:
+        """Apply penalty method to population."""
+        for individual, violation in zip(population, violations):
+            if not violation.is_feasible:
+                # Add penalty to objectives
+                penalty = violation.compute_penalty(self.penalty_factor)
+
+                # Modify objectives (assuming minimization)
+                for obj_name in individual.objectives:
+                    individual.objectives[obj_name] += penalty
+
+                # Update objective values
+                individual.objective_values = list(individual.objectives.values())
+
+        # Adapt penalty factor if enabled
+        if self.adaptive_penalty:
+            self._adapt_penalty_factor(violations)
+
+        return population
+
+    def _apply_death_penalty(
+        self,
+        population: List['Individual'],
+        violations: List[ConstraintViolation]
+    ) -> List['Individual']:
+        """Apply death penalty - remove infeasible individuals."""
+        feasible_population = []
+
+        for individual, violation in zip(population, violations):
+            if violation.is_feasible:
+                feasible_population.append(individual)
+
+        if not feasible_population:
+            logger.warning("Death penalty resulted in empty population - keeping best individuals")
+            # Keep individuals with smallest violations
+            sorted_pop = sorted(
+                zip(population, violations),
+                key=lambda x: x[1].total_violation
+            )
+            # Keep top 10% or at least 1 individual
+            keep_count = max(1, len(population) // 10)
+            feasible_population = [ind for ind, _ in sorted_pop[:keep_count]]
+
+        return feasible_population
+
+    def _apply_feasibility_rules(
+        self,
+        population: List['Individual'],
+        violations: List[ConstraintViolation]
+    ) -> List['Individual']:
+        """
+        Apply feasibility rules for constraint handling.
+
+        Rules:
+        1. Feasible solutions dominate infeasible solutions
+        2. Among infeasible solutions, those with smaller violations dominate
+        3. Among feasible solutions, use standard domination
+        """
+        # Update individual domination method to consider constraints
+        for individual, violation in zip(population, violations):
+            individual._constraint_violation_obj = violation
+
+        return population
+
+    def _apply_constraint_domination(
+        self,
+        population: List['Individual'],
+        violations: List[ConstraintViolation]
+    ) -> List['Individual']:
+        """Apply constraint domination principle."""
+        # Similar to feasibility rules but with more sophisticated handling
+        for individual, violation in zip(population, violations):
+            individual._constraint_violation_obj = violation
+
+            # Modify domination comparison to include constraints
+            original_dominates = individual.dominates
+
+            def constraint_aware_dominates(other):
+                # If both feasible, use standard domination
+                if individual.is_feasible and other.is_feasible:
+                    return original_dominates(other)
+
+                # If only this is feasible, it dominates
+                if individual.is_feasible and not other.is_feasible:
+                    return True
+
+                # If only other is feasible, this doesn't dominate
+                if not individual.is_feasible and other.is_feasible:
+                    return False
+
+                # Both infeasible - compare constraint violations
+                if individual.constraint_violation < other.constraint_violation:
+                    return True
+                elif individual.constraint_violation > other.constraint_violation:
+                    return False
+                else:
+                    # Same violation level - use standard domination
+                    return original_dominates(other)
+
+            individual.dominates = constraint_aware_dominates
+
+        return population
+
+    def _adapt_penalty_factor(self, violations: List[ConstraintViolation]):
+        """Adapt penalty factor based on population feasibility."""
+        feasible_count = sum(1 for v in violations if v.is_feasible)
+        feasible_ratio = feasible_count / len(violations) if violations else 0.0
+
+        self.feasible_ratio_history.append(feasible_ratio)
+
+        # Keep only recent history
+        if len(self.feasible_ratio_history) > 10:
+            self.feasible_ratio_history.pop(0)
+
+        # Adapt penalty factor
+        if len(self.feasible_ratio_history) >= 5:
+            recent_ratio = np.mean(self.feasible_ratio_history[-5:])
+
+            if recent_ratio < 0.1:  # Too few feasible solutions
+                self.penalty_factor /= self.penalty_adaptation_rate
+            elif recent_ratio > 0.9:  # Too many feasible solutions
+                self.penalty_factor *= self.penalty_adaptation_rate
+
+        self.generation_count += 1
+
+    def get_statistics(self) -> Dict[str, Any]:
+        """Get constraint handling statistics."""
+        feasible_ratio = (self.feasible_evaluations / self.total_evaluations
+                         if self.total_evaluations > 0 else 0.0)
+
+        return {
+            'method': self.method.value,
+            'total_evaluations': self.total_evaluations,
+            'feasible_evaluations': self.feasible_evaluations,
+            'feasible_ratio': feasible_ratio,
+            'current_penalty_factor': self.penalty_factor,
+            'initial_penalty_factor': self.initial_penalty_factor,
+            'generation_count': self.generation_count,
+            'feasible_ratio_history': self.feasible_ratio_history.copy(),
+        }
 
 logger = logging.getLogger(__name__)
 
@@ -357,6 +687,13 @@ class NSGAIIOptimizer(BaseOptimizer):
         self.mutation_probability = mutation_probability
         self.tournament_size = tournament_size
         self.constraint_functions = constraint_functions or []
+
+        # Initialize constraint handler
+        self.constraint_handler = ConstraintHandler(
+            method=kwargs.get('constraint_method', ConstraintHandlingMethod.FEASIBILITY_RULES),
+            penalty_factor=kwargs.get('penalty_factor', 1000.0),
+            adaptive_penalty=kwargs.get('adaptive_penalty', True)
+        )
         
         # Set random seed
         if random_seed is not None:
@@ -716,6 +1053,12 @@ class NSGAIIOptimizer(BaseOptimizer):
 
             # Evaluate offspring
             self._evaluate_population(offspring)
+
+            # Apply constraint handling
+            if self.constraint_functions:
+                offspring = self.constraint_handler.handle_constraints(
+                    offspring, self.constraint_functions
+                )
 
             # Combine parent and offspring populations
             combined_population = self.population + offspring

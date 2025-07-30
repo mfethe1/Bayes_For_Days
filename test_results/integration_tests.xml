@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="0" skipped="0" tests="1" time="0.501" timestamp="2025-07-30T07:00:22.270776-04:00" hostname="DESKTOP-PBE7J2V"><testcase classname="" name="tests.integration.test_full_platform_integration" time="0.000"><error message="collection failure">ImportError while importing test module 'E:\Projects\Bayes_For_Days\tests\integration\test_full_platform_integration.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\integration\test_full_platform_integration.py:18: in &lt;module&gt;
+    from bayes_for_days.core.types import (
+E   ModuleNotFoundError: No module named 'bayes_for_days'</error></testcase></testsuite></testsuites>

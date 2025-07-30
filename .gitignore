@@ -109,6 +109,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+bayes_env/
 
 # Spyder project settings
 .spyderproject
@@ -160,6 +161,25 @@ outputs/
 *.json
 *.csv
 *.xlsx
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.pdf
 !examples/*.json
 !examples/*.csv
 !examples/*.xlsx
+
+# Generated reports (keep important documentation)
+*_report.md
+*_results.json
+*_analysis.png
+*_visualization*.png
+*_graph.png
+!BAYES_FOR_DAYS_REVOLUTIONARY_PLATFORM_COMPLETE.md
+!DEMONSTRATION_FILES_SUMMARY.md
+!PLATFORM_SETUP_COMPLETE.md
+!REVOLUTIONARY_ENHANCEMENTS_COMPLETE.md
+!competitive_analysis.md
+!scientist_enhancement_requests.md

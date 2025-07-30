@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="6" failures="0" skipped="0" tests="6" time="4.674" timestamp="2025-07-30T07:00:15.767100-04:00" hostname="DESKTOP-PBE7J2V"><testcase classname="" name="tests.unit.test_acquisition_functions" time="0.000"><error message="collection failure">ImportError while importing test module 'E:\Projects\Bayes_For_Days\tests\unit\test_acquisition_functions.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\unit\test_acquisition_functions.py:16: in &lt;module&gt;
+    from bayes_for_days.optimization.acquisition import (
+E   ModuleNotFoundError: No module named 'bayes_for_days'</error></testcase><testcase classname="" name="tests.unit.test_experimental_variables" time="0.000"><error message="collection failure">ImportError while importing test module 'E:\Projects\Bayes_For_Days\tests\unit\test_experimental_variables.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\unit\test_experimental_variables.py:16: in &lt;module&gt;
+    from bayes_for_days.experimental_design.variables import (
+E   ModuleNotFoundError: No module named 'bayes_for_days'</error></testcase><testcase classname="" name="tests.unit.test_gaussian_process" time="0.000"><error message="collection failure">ImportError while importing test module 'E:\Projects\Bayes_For_Days\tests\unit\test_gaussian_process.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\unit\test_gaussian_process.py:19: in &lt;module&gt;
+    from bayes_for_days.models.gaussian_process import (
+E   ModuleNotFoundError: No module named 'bayes_for_days'</error></testcase><testcase classname="" name="tests.unit.test_multi_objective" time="0.000"><error message="collection failure">ImportError while importing test module 'E:\Projects\Bayes_For_Days\tests\unit\test_multi_objective.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\unit\test_multi_objective.py:17: in &lt;module&gt;
+    from bayes_for_days.optimization.multi_objective import (
+E   ModuleNotFoundError: No module named 'bayes_for_days'</error></testcase><testcase classname="" name="tests.unit.test_optimization_loop" time="0.000"><error message="collection failure">ImportError while importing test module 'E:\Projects\Bayes_For_Days\tests\unit\test_optimization_loop.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\unit\test_optimization_loop.py:16: in &lt;module&gt;
+    from bayes_for_days.optimization.optimization_loop import (
+E   ModuleNotFoundError: No module named 'bayes_for_days'</error></testcase><testcase classname="" name="tests.unit.test_pareto_management" time="0.000"><error message="collection failure">ImportError while importing test module 'E:\Projects\Bayes_For_Days\tests\unit\test_pareto_management.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Program Files\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\unit\test_pareto_management.py:17: in &lt;module&gt;
+    from bayes_for_days.optimization.pareto import (
+E   ModuleNotFoundError: No module named 'bayes_for_days'</error></testcase></testsuite></testsuites>

@@ -8,7 +8,7 @@ the interface contracts for all major components of the system.
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional, Union
 import numpy as np
-from pydantic import BaseModel as PydanticBaseModel
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict
 
 from bayes_for_days.core.types import (
     ExperimentPoint,
@@ -26,21 +26,21 @@ from bayes_for_days.core.types import (
 class BaseModel(PydanticBaseModel):
     """
     Base model class with common configuration.
-    
+
     Extends Pydantic BaseModel with custom configuration
     for the Bayes For Days platform.
     """
-    
-    class Config:
-        """Pydantic configuration."""
-        arbitrary_types_allowed = True
-        validate_assignment = True
-        use_enum_values = True
-        json_encoders = {
+
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        validate_assignment=True,
+        use_enum_values=True,
+        json_encoders={
             np.ndarray: lambda v: v.tolist(),
             np.integer: lambda v: int(v),
             np.floating: lambda v: float(v),
         }
+    )
 
 
 class BaseSurrogateModel(ABC):

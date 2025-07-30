@@ -8,9 +8,15 @@ used throughout the optimization platform.
 from enum import Enum
 from typing import Dict, List, Optional, Union, Any, Tuple, Callable
 from dataclasses import dataclass
-from pydantic import BaseModel, Field
+from pydantic import Field, ConfigDict
+from pydantic import BaseModel as PydanticBaseModel
 import numpy as np
 from datetime import datetime
+
+
+class BaseModel(PydanticBaseModel):
+    """Base model with numpy support."""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class ObjectiveType(str, Enum):

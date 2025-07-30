@@ -6,7 +6,7 @@ experimental designs and space-filling samples.
 """
 
 import numpy as np
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any
 from scipy.stats import qmc
 from sklearn.preprocessing import MinMaxScaler
 import logging
@@ -365,3 +365,109 @@ def adaptive_sampling(
     
     logger.info(f"Generated {n_samples} adaptive samples complementing {len(existing_samples)} existing samples")
     return new_samples
+
+
+def latin_hypercube_sampling_parameter_space(
+    parameter_space: 'ParameterSpace',
+    n_samples: int,
+    random_seed: Optional[int] = None
+) -> List[Dict[str, Any]]:
+    """
+    Generate Latin Hypercube samples for a given parameter space.
+
+    Args:
+        parameter_space: Parameter space definition
+        n_samples: Number of samples to generate
+        random_seed: Random seed for reproducibility
+
+    Returns:
+        List of parameter dictionaries
+    """
+    from bayes_for_days.core.types import ParameterType
+
+    # Extract bounds for continuous parameters
+    bounds = []
+    param_info = []
+
+    for param in parameter_space.parameters:
+        if param.type == ParameterType.CONTINUOUS:
+            bounds.append((param.bounds[0], param.bounds[1]))
+            param_info.append(('continuous', param.name, None))
+        elif param.type == ParameterType.DISCRETE:
+            # Map discrete to continuous for sampling, then round
+            bounds.append((0, len(param.categories) - 1))
+            param_info.append(('discrete', param.name, param.categories))
+        elif param.type == ParameterType.INTEGER:
+            bounds.append((param.bounds[0], param.bounds[1]))
+            param_info.append(('integer', param.name, None))
+        else:
+            raise ValueError(f"Unsupported parameter type: {param.type}")
+
+    # Generate LHS samples
+    if bounds:
+        samples = latin_hypercube_sampling(bounds, n_samples, random_seed)
+    else:
+        return []
+
+    # Convert samples to parameter dictionaries
+    param_dicts = []
+    for sample in samples:
+        param_dict = {}
+        for i, (param_type, param_name, categories) in enumerate(param_info):
+            value = sample[i]
+
+            if param_type == 'continuous':
+                param_dict[param_name] = value
+            elif param_type == 'discrete':
+                idx = int(round(value))
+                idx = max(0, min(idx, len(categories) - 1))  # Clamp to valid range
+                param_dict[param_name] = categories[idx]
+            elif param_type == 'integer':
+                param_dict[param_name] = int(round(value))
+
+        param_dicts.append(param_dict)
+
+    return param_dicts
+
+
+# Alias for backward compatibility
+def latin_hypercube_sampling(
+    parameter_space_or_bounds,
+    n_samples: int,
+    random_seed: Optional[int] = None,
+    **kwargs
+) -> List[Dict[str, Any]]:
+    """
+    Generate Latin Hypercube samples.
+
+    This function can handle both ParameterSpace objects and bounds lists
+    for backward compatibility.
+    """
+    # Check if first argument is a ParameterSpace
+    if hasattr(parameter_space_or_bounds, 'parameters'):
+        return latin_hypercube_sampling_parameter_space(
+            parameter_space_or_bounds, n_samples, random_seed
+        )
+    else:
+        # Legacy bounds-based sampling
+        bounds = parameter_space_or_bounds
+        if not bounds:
+            raise ValueError("Bounds cannot be empty")
+
+        n_dimensions = len(bounds)
+
+        # Create Latin Hypercube sampler
+        if random_seed is not None:
+            np.random.seed(random_seed)
+
+        sampler = qmc.LatinHypercube(d=n_dimensions, seed=random_seed)
+
+        # Generate samples in [0, 1]^d
+        unit_samples = sampler.random(n_samples)
+
+        # Scale to actual bounds
+        samples = np.zeros_like(unit_samples)
+        for i, (low, high) in enumerate(bounds):
+            samples[:, i] = unit_samples[:, i] * (high - low) + low
+
+        return samples
